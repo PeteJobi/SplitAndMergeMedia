@@ -15,6 +15,7 @@ namespace SplitAndMerge
         bool isPaused;
         bool isSplitting;
         string pathForView;
+        string[] filesCreated = Array.Empty<string>();
         public MainForm()
         {
             InitializeComponent();
@@ -130,6 +131,7 @@ namespace SplitAndMerge
             {
                 foreach (string fileName in fileNames) await writer.WriteLineAsync($"file '{fileName}'");
             }
+            filesCreated = new[] { outputFileName, concatFileName };
 
             int currentSegment = 0;
             TimeSpan elapsedSegmentDurationSum = segmentDurations[currentSegment];
@@ -202,12 +204,12 @@ namespace SplitAndMerge
         bool CheckNoSpaceDuringBreakMerge(string line)
         {
             if (!line.EndsWith("No space left on device") && !line.EndsWith("I/O error")) return false;
-            //SuspendProcess(currentProcess);
+            SuspendProcess(currentProcess);
             MessageBox.Show($"Process failed.\nError message: {line}");
-            //frameFolders = null;
-            //Invoke(() => Cancel(true));
+            Invoke(() => Cancel(true));
             return true;
         }
+
         string GetOutputFolder(string path)
         {
             string inputName = Path.GetFileNameWithoutExtension(path);
@@ -219,6 +221,7 @@ namespace SplitAndMerge
                 Directory.Delete(outputFolder, true);
             }
             Directory.CreateDirectory(outputFolder);
+            filesCreated = new[] { outputFolder };
             return outputFolder;
         }
 
@@ -236,7 +239,6 @@ namespace SplitAndMerge
             pauseButton.Text = "View";
             pauseButton.Click -= pauseButton_Click;
             pauseButton.Click += ViewFiles;
-            //Height = FULL_NONVIDEO_HEIGHT;
         }
 
         private void ViewFiles(object? sender, EventArgs e)
@@ -263,6 +265,11 @@ namespace SplitAndMerge
             pauseButton.Click -= pauseButton_Click;
             Reset(null, EventArgs.Empty);
             currentProcess = null;
+            foreach (string path in filesCreated)
+            {
+                if (Directory.Exists(path)) Directory.Delete(path, true);
+                else if(File.Exists(path)) File.Delete(path);
+            }
         }
 
         bool ConfirmCancel()
