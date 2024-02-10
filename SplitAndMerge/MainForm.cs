@@ -74,7 +74,8 @@ namespace SplitAndMerge
             {
                 Array.Sort(fileNames);
                 string fileNameNoExt = Path.GetFileNameWithoutExtension(fileNames[0]);
-                string outputFileName = fileNameNoExt.EndsWith("000") ? fileNameNoExt[0..^3] : fileNameNoExt;
+                string? num = fileNameNoExt.Contains("000") ? "000" : fileNameNoExt.Contains("001") ? "001" : null;
+                string outputFileName = num != null ? fileNameNoExt.Remove(fileNameNoExt.LastIndexOf(num), num.Length) : fileNameNoExt;
                 string folder = Path.GetDirectoryName(fileNames[0]) ?? throw new NullReferenceException("The specified path is null");
                 fileNameLabel.Text = outputFileName;
                 outputFileName = pathForView = Path.Combine(folder, outputFileName + Path.GetExtension(fileNames[0]));
@@ -136,12 +137,13 @@ namespace SplitAndMerge
             int currentSegment = 0;
             TimeSpan elapsedSegmentDurationSum = segmentDurations[currentSegment];
             TimeSpan totalDuration = segmentDurations.Aggregate((curr, prev) => curr + prev);
+            currentFileLabel.Text = Path.GetFileName(fileNames[currentSegment]);
             await StartProcess(ffmpegPath, $"-f concat -safe 0 -i \"{concatFileName}\" -c copy \"{outputFileName}\"", null, (sender, args) =>
             {
+                Debug.WriteLine(args.Data);
                 if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
                 if (args.Data.StartsWith("frame"))
                 {
-                    Debug.WriteLine(args.Data);
                     if (CheckNoSpaceDuringBreakMerge(args.Data)) return;
                     MatchCollection matchCollection = Regex.Matches(args.Data, @"^frame=\s*\d+\s.+?time=(\d{2}:\d{2}:\d{2}\.\d{2}).+");
                     if (matchCollection.Count == 0) return;
@@ -150,6 +152,7 @@ namespace SplitAndMerge
                     {
                         currentSegment++;
                         elapsedSegmentDurationSum += segmentDurations[currentSegment];
+                        Invoke(() => currentFileLabel.Text = Path.GetFileName(fileNames[currentSegment]));
                     }
                     TimeSpan segmentDuration = segmentDurations[currentSegment];
                     int totalSegments = segmentDurations.Count;
