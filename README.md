@@ -1,5 +1,6 @@
 # Split And Merge Media
 This repo provides a simple GUI for splitting and merging video and music, with features for pausing/canceling. Only supports Windows 10 and 11 (not tested on other versions of Windows). Powered by FFMPEG.
+
 ![image](https://github.com/PeteJobi/SplitAndMergeMedia/assets/45200292/643e23a9-b4c4-4851-b08d-21c5bdd63bb3)
 
 ## How to build
