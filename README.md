@@ -20,7 +20,7 @@ If you wish to run the software without installing the required .NET runtime, do
 ## How to use
 The file types supported are ".mp4", ".mkv" and ".mp3".
 
-The two options available are **Split** for splitting one video or music file into segments determined by duration, and **Merge** for merging two or more video or music file segments into one. It's important to know that for merging, the file segments chosen have to be of the same codec, file type, resolution e.t.c. No re-encoding is performed in the process.
+The two options available are **Split** for splitting one video or music file into segments determined by duration, and **Merge** for merging two or more video or music file segments into one. It's important to know that for merging, the file segments chosen have to be of the same codec, file type, resolution e.t.c. No re-encoding is performed in the process. Also, the files you select for merging are merged in alphabetical order of the file names. Adding numbering to the file names (e.g video000.mp4, video001.mp4) should be sufficient. 
 
 The use-case that prompted me to build this was that I needed to split a really large video file into smaller parts so I could process each part (frame interpolation in my case) without having to worry about power outage. More than once, I've tried to interpolate a 4k video file, and after 5 hours and at 89%, my PC goes off due to power outage.
 
