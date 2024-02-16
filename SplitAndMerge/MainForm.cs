@@ -138,7 +138,7 @@ namespace SplitAndMerge
             TimeSpan elapsedSegmentDurationSum = segmentDurations[currentSegment];
             TimeSpan totalDuration = segmentDurations.Aggregate((curr, prev) => curr + prev);
             currentFileLabel.Text = Path.GetFileName(fileNames[currentSegment]);
-            await StartProcess(ffmpegPath, $"-f concat -safe 0 -i \"{concatFileName}\" -c copy \"{outputFileName}\"", null, (sender, args) =>
+            await StartProcess(ffmpegPath, $"-f concat -safe 0 -i \"{concatFileName}\" -c copy -map 0 \"{outputFileName}\"", null, (sender, args) =>
             {
                 Debug.WriteLine(args.Data);
                 if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
@@ -271,7 +271,7 @@ namespace SplitAndMerge
             foreach (string path in filesCreated)
             {
                 if (Directory.Exists(path)) Directory.Delete(path, true);
-                else if(File.Exists(path)) File.Delete(path);
+                else if (File.Exists(path)) File.Delete(path);
             }
         }
 
@@ -375,7 +375,7 @@ namespace SplitAndMerge
             if (!fileDialogPanel.Visible) return;
             string[]? files = ((string[]?)e.Data?.GetData(DataFormats.FileDrop, false));
             if (files?.Length < 1) return;
-            if (Path.GetExtension(files[0]) == string.Empty)
+            if (Directory.Exists(files[0]))
             {
                 files = Directory.GetFiles(files[0]);
             }

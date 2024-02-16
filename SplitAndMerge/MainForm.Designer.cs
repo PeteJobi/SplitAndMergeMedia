@@ -361,7 +361,7 @@
             minuteTextBox.Name = "minuteTextBox";
             minuteTextBox.Size = new Size(35, 23);
             minuteTextBox.TabIndex = 9;
-            minuteTextBox.Text = "20";
+            minuteTextBox.Text = "10";
             minuteTextBox.TextAlign = HorizontalAlignment.Right;
             // 
             // MainForm
