@@ -54,6 +54,8 @@ namespace SplitAndMerge
             currentActionProgressBar.Value = 0;
             actionTypePanel.Enabled = true;
             splitTypePanel.Enabled = true;
+            splitTypePanel.Visible = true;
+            splitTypeLabel.Visible = true;
             intervalSplitParamsPanel.Enabled = true;
             specificSplitParamsPanel.Enabled = true;
             ResetProgressUI(true);
@@ -86,6 +88,8 @@ namespace SplitAndMerge
             }
             else
             {
+                splitTypePanel.Visible = false;
+                splitTypeLabel.Visible = false;
                 Array.Sort(fileNames);
                 string fileNameNoExt = Path.GetFileNameWithoutExtension(fileNames[0]);
                 string? num = fileNameNoExt.Contains("000") ? "000" : fileNameNoExt.Contains("001") ? "001" : null;

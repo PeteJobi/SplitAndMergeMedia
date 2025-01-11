@@ -62,7 +62,7 @@
             splitTypePanel = new Panel();
             specificRadioButton = new RadioButton();
             intervalRadioButton = new RadioButton();
-            label1 = new Label();
+            splitTypeLabel = new Label();
             specificSplitParamsPanel = new Panel();
             addButton = new Button();
             endTextBox = new TextBox();
@@ -409,17 +409,17 @@
             intervalRadioButton.UseVisualStyleBackColor = true;
             intervalRadioButton.CheckedChanged += IntervalRadioButton_CheckedChanged;
             // 
-            // label1
+            // splitTypeLabel
             // 
-            label1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            label1.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
-            label1.ForeColor = SystemColors.ControlDarkDark;
-            label1.Location = new Point(12, 143);
-            label1.Name = "label1";
-            label1.Size = new Size(760, 15);
-            label1.TabIndex = 7;
-            label1.Text = "Are you splitting ar regular intervals or are you extracting at arbitrary time frames?";
-            label1.TextAlign = ContentAlignment.MiddleCenter;
+            splitTypeLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            splitTypeLabel.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
+            splitTypeLabel.ForeColor = SystemColors.ControlDarkDark;
+            splitTypeLabel.Location = new Point(12, 143);
+            splitTypeLabel.Name = "splitTypeLabel";
+            splitTypeLabel.Size = new Size(760, 15);
+            splitTypeLabel.TabIndex = 7;
+            splitTypeLabel.Text = "Are you splitting ar regular intervals or are you extracting at arbitrary time frames?";
+            splitTypeLabel.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // specificSplitParamsPanel
             // 
@@ -502,7 +502,7 @@
             ClientSize = new Size(784, 410);
             Controls.Add(specificSplitParamsPanel);
             Controls.Add(splitTypePanel);
-            Controls.Add(label1);
+            Controls.Add(splitTypeLabel);
             Controls.Add(progressPanel);
             Controls.Add(actionTypePanel);
             Controls.Add(label2);
@@ -568,7 +568,7 @@
         private Panel splitTypePanel;
         private RadioButton specificRadioButton;
         private RadioButton intervalRadioButton;
-        private Label label1;
+        private Label splitTypeLabel;
         private Panel specificSplitParamsPanel;
         private Label startLabel;
         private TextBox startTextBox;
