@@ -2,12 +2,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace SplitAndMerge
 {
     public partial class MainForm : Form
     {
-        static readonly string[] allowedExts = new[] { ".mkv", ".mp4", ".mp3" };
+        static readonly string[] allowedExts = { ".mkv", ".mp4", ".mp3" };
         const int PROGRESS_MAX = 1_000_000;
         const string ffmpegPath = "ffmpeg.exe";
         Process? currentProcess;
@@ -16,11 +17,21 @@ namespace SplitAndMerge
         bool isSplitting;
         string pathForView;
         string[] filesCreated = Array.Empty<string>();
+        List<SpecificSplitControls> specificSplitControls = new();
+        private int incrementalSplitControlsDisplacement;
+        private int fullSplitControlsDisplacement;
+
         public MainForm()
         {
             InitializeComponent();
             splitRadioButton.Checked = true;
+            intervalRadioButton.Checked = true;
             overallProgressBar.Maximum = currentActionProgressBar.Maximum = PROGRESS_MAX;
+            specificSplitParamsPanel.Top = intervalSplitParamsPanel.Top;
+            specificSplitParamsPanel.Visible = false;
+            incrementalSplitControlsDisplacement = startTextBox.Height + 3;
+            specificSplitControls.Add(new SpecificSplitControls{ StartTextBox = startTextBox, EndTextBox = endTextBox });
+            IntervalRadioButton_CheckedChanged(null, EventArgs.Empty);
             Reset(null, EventArgs.Empty);
         }
 
@@ -42,9 +53,11 @@ namespace SplitAndMerge
             overallProgressBar.Value = 0;
             currentActionProgressBar.Value = 0;
             actionTypePanel.Enabled = true;
-            splitParamsPanel.Enabled = true;
+            splitTypePanel.Enabled = true;
+            intervalSplitParamsPanel.Enabled = true;
+            specificSplitParamsPanel.Enabled = true;
             ResetProgressUI(true);
-            Height = splitRadioButton.Checked ? 224 : 160;
+            Height = splitRadioButton.Checked ? (intervalRadioButton.Checked ? 250 : 274 + fullSplitControlsDisplacement) : 158;
         }
 
         void ResetProgressUI(bool show)
@@ -60,22 +73,23 @@ namespace SplitAndMerge
             selectLabel.Hide();
             fileNameLabel.Show();
             actionTypePanel.Enabled = false;
-            splitParamsPanel.Enabled = false;
-            Height = isSplitting ? 373 : 295;
+            splitTypePanel.Enabled = false;
+            intervalSplitParamsPanel.Enabled = false;
+            specificSplitParamsPanel.Enabled = false;
+            Height = isSplitting ? 399 + (intervalRadioButton.Checked ? 0 : fullSplitControlsDisplacement) : 295;
             howLongLabel.Visible = isSplitting;
-            progressPanel.Top = isSplitting ? 204 : 127;
+            progressPanel.Top = isSplitting ? 230 + (intervalRadioButton.Checked ? 0 : fullSplitControlsDisplacement) : 127;
             if (isSplitting)
             {
                 fileNameLabel.Text = Path.GetFileName(fileNames[0]);
-                TimeSpan segmentDuration = TimeSpan.Parse($"{hourTextBox.Text}:{minuteTextBox.Text}:{secondTextBox.Text}");
-                await Split(fileNames[0], segmentDuration);
+                await (intervalRadioButton.Checked ? IntervalSplit(fileNames[0]) : SpecificSplit(fileNames[0]));
             }
             else
             {
                 Array.Sort(fileNames);
                 string fileNameNoExt = Path.GetFileNameWithoutExtension(fileNames[0]);
                 string? num = fileNameNoExt.Contains("000") ? "000" : fileNameNoExt.Contains("001") ? "001" : null;
-                string outputFileName = num != null ? fileNameNoExt.Remove(fileNameNoExt.LastIndexOf(num), num.Length) : fileNameNoExt;
+                string outputFileName = num != null ? fileNameNoExt.Remove(fileNameNoExt.LastIndexOf(num), num.Length) : fileNameNoExt + "_MERGED";
                 string folder = Path.GetDirectoryName(fileNames[0]) ?? throw new NullReferenceException("The specified path is null");
                 fileNameLabel.Text = outputFileName;
                 outputFileName = pathForView = Path.Combine(folder, outputFileName + Path.GetExtension(fileNames[0]));
@@ -83,12 +97,13 @@ namespace SplitAndMerge
             }
         }
 
-        async Task Split(string fileName, TimeSpan segmentDuration)
+        async Task IntervalSplit(string fileName)
         {
+            var segmentDuration = TimeSpan.Parse($"{hourTextBox.Text}:{minuteTextBox.Text}:{secondTextBox.Text}");
             TimeSpan duration = TimeSpan.MinValue;
             int totalSegments = 0;
             int currentSegment = -1;
-            await StartProcess(ffmpegPath, $"-i \"{fileName}\" -c copy -map 0 -segment_time {segmentDuration} -f segment -reset_timestamps 1 \"{GetOutputFolder(fileName)}/{ExtendedName(fileName, "%03d")}\"", null, (sender, args) =>
+            await StartProcess(ffmpegPath, $"-i \"{fileName}\" -c copy -map 0 -segment_time {segmentDuration} -copyts -avoid_negative_ts make_non_negative -f segment -reset_timestamps 1 \"{GetOutputFolder(fileName)}/{ExtendedName(fileName, "%03d")}\"", null, (sender, args) =>
             {
                 if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
                 if (duration == TimeSpan.MinValue)
@@ -96,7 +111,7 @@ namespace SplitAndMerge
                     MatchCollection matchCollection = Regex.Matches(args.Data, @"\s*Duration:\s(\d{2}:\d{2}:\d{2}\.\d{2}).+");
                     if (matchCollection.Count == 0) return;
                     duration = TimeSpan.Parse(matchCollection[0].Groups[1].Value);
-                    totalSegments = SetTotalProgress(duration, segmentDuration);
+                    totalSegments = SetTotalProgressIntervalSplit(duration, segmentDuration);
                 }
                 else if (args.Data.StartsWith("[segment @"))
                 {
@@ -108,11 +123,86 @@ namespace SplitAndMerge
                     if (CheckNoSpaceDuringBreakMerge(args.Data)) return;
                     MatchCollection matchCollection = Regex.Matches(args.Data, @"^frame=\s*\d+\s.+?time=(\d{2}:\d{2}:\d{2}\.\d{2}).+");
                     if (matchCollection.Count == 0) return;
-                    IncrementSplitProgress(segmentDuration, TimeSpan.Parse(matchCollection[0].Groups[1].Value), duration, currentSegment, totalSegments);
+                    IncrementIntervalSplitProgress(segmentDuration, TimeSpan.Parse(matchCollection[0].Groups[1].Value), duration, currentSegment, totalSegments);
                 }
             });
             if (HasBeenKilled()) return;
             AllDone(totalSegments);
+        }
+
+        async Task SpecificSplit(string fileName)
+        {
+            var mediaDuration = TimeSpan.MinValue;
+            var total = specificSplitControls.Count;
+            await StartProcess(ffmpegPath, $"-i \"{fileName}\"", null, (sender, args) =>
+            {
+                if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
+                if (mediaDuration != TimeSpan.MinValue) return;
+                var matchCollection = Regex.Matches(args.Data, @"\s*Duration:\s(\d{2}:\d{2}:\d{2}\.\d{2}).+");
+                if (matchCollection.Count == 0) return;
+                mediaDuration = TimeSpan.Parse(matchCollection[0].Groups[1].Value);
+            });
+            if (HasBeenKilled()) return;
+
+            if (!ValidateSplitParams(mediaDuration))
+            {
+                Reset(null, EventArgs.Empty);
+                return;
+            }
+            Invoke(() => totalSegmentCountLabel.Text = $"0/{total}");
+            Invoke(() => currentFileLabel.Text = ExtendedName(fileName, 0.ToString("D3")));
+
+            var totalDuration = specificSplitControls.Select(c => c.Duration).Aggregate((a, b) => a + b);
+            var durationElapsed = TimeSpan.Zero;
+            var folder = GetOutputFolder(fileName);
+            for (var i = 0; i < specificSplitControls.Count; i++)
+            {
+                var controls = specificSplitControls[i];
+                var current = i;
+                Invoke(() => currentFileLabel.Text = ExtendedName(fileName, current.ToString("D3")));
+                await StartProcess(ffmpegPath, $"-i \"{fileName}\" -c copy -map 0 -ss {controls.StartTextBox.Text} -to {controls.EndTextBox.Text} -avoid_negative_ts make_zero \"{folder}/{ExtendedName(fileName, current.ToString("D3"))}\"", null, (sender, args) =>
+                {
+                    if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
+                    if (!args.Data.StartsWith("frame")) return;
+                    if (CheckNoSpaceDuringBreakMerge(args.Data)) return;
+                    var matchCollection = Regex.Matches(args.Data, @"^frame=\s*\d+\s.+?time=(\d{2}:\d{2}:\d{2}\.\d{2}).+");
+                    if (matchCollection.Count == 0) return;
+                    IncrementSpecificSplitProgress(controls.Duration, TimeSpan.Parse(matchCollection[0].Groups[1].Value), durationElapsed, totalDuration, current, total);
+                });
+                if (HasBeenKilled()) return;
+                durationElapsed += controls.Duration;
+            }
+            AllDone(total);
+        }
+
+        bool ValidateSplitParams(TimeSpan duration)
+        {
+            var errors = new List<string>();
+            for (var i = 0; i < specificSplitControls.Count; i++)
+            {
+                var controls = specificSplitControls[i];
+
+                if (!TimeSpan.TryParse(controls.StartTextBox.Text, out var startSpan) ||
+                    !TimeSpan.TryParse(controls.EndTextBox.Text, out var endSpan) || startSpan > endSpan)
+                {
+                    errors.Add($"Range [{controls.StartTextBox.Text}, {controls.EndTextBox.Text}] contains invalid value(s)");
+                    controls.Invalid = true;
+                } else if (startSpan == endSpan)
+                {
+                    errors.Add($"Range [{controls.StartTextBox.Text}, {controls.EndTextBox.Text}] has no difference");
+                    controls.Invalid = true;
+                } else if (startSpan > duration || endSpan > duration)
+                {
+                    errors.Add($"Range [{controls.StartTextBox.Text}, {controls.EndTextBox.Text}] exceeds the duration of the video");
+                    controls.Invalid = true;
+                }
+                else controls.Duration = endSpan - startSpan;
+            }
+
+            if (!errors.Any()) return true;
+            var text = string.Join("/n", errors);
+            MessageBox.Show(text, "Invalid split duration(s)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
 
         async Task Merge(string[] fileNames, string outputFileName, string folder)
@@ -166,7 +256,7 @@ namespace SplitAndMerge
 
         string ExtendedName(string fileName, string extra) => $"{Path.GetFileNameWithoutExtension(fileName)}{extra}{Path.GetExtension(fileName)}";
 
-        int SetTotalProgress(TimeSpan fullDuration, TimeSpan segmentDuration)
+        int SetTotalProgressIntervalSplit(TimeSpan fullDuration, TimeSpan segmentDuration)
         {
             double fraction = fullDuration / segmentDuration;
             int total = (int)Math.Ceiling(fraction);
@@ -174,7 +264,7 @@ namespace SplitAndMerge
             return total;
         }
 
-        void IncrementSplitProgress(TimeSpan segmentDuration, TimeSpan currentTime, TimeSpan totalDuration, int currentSegment, int totalSegments)
+        void IncrementIntervalSplitProgress(TimeSpan segmentDuration, TimeSpan currentTime, TimeSpan totalDuration, int currentSegment, int totalSegments)
         {
             Invoke(() =>
             {
@@ -184,6 +274,18 @@ namespace SplitAndMerge
                 if (currentSegment == totalSegments - 1) Debug.WriteLine(currentSegmentDuration);
                 double fraction = (currentTime - (currentSegment * segmentDuration)) / currentSegmentDuration;
                 currentActionProgressBar.Value = Math.Max(0, Math.Min((int)(fraction * PROGRESS_MAX), PROGRESS_MAX));
+                splitMergeProgressLabel.Text = $"{Math.Round(fraction * 100, 2)} %";
+            });
+        }
+
+        void IncrementSpecificSplitProgress(TimeSpan segmentDuration, TimeSpan currentTime, TimeSpan elapsedDuration, TimeSpan totalDuration, int currentSegment, int totalSegments)
+        {
+            Invoke(() =>
+            {
+                totalSegmentCountLabel.Text = $"{currentSegment}/{totalSegments}";
+                overallProgressBar.Value = Math.Max(0, Math.Min((int)((currentTime + elapsedDuration) / totalDuration * PROGRESS_MAX), PROGRESS_MAX));
+                double fraction = currentTime / segmentDuration;
+                currentActionProgressBar.Value = (int)(fraction * PROGRESS_MAX);
                 splitMergeProgressLabel.Text = $"{Math.Round(fraction * 100, 2)} %";
             });
         }
@@ -286,18 +388,6 @@ namespace SplitAndMerge
             return confirm;
         }
 
-        private void SplitRadioButton_CheckedChanged(object sender, EventArgs e)
-        {
-            isSplitting = splitRadioButton.Checked;
-            selectSingleFileButton.Visible = splitRadioButton.Checked;
-            selectFilesButton.Visible = !splitRadioButton.Checked;
-            selectFolderButton.Visible = !splitRadioButton.Checked;
-            selectLabel.Text = splitRadioButton.Checked ? "Select a video to split" : "Select multiple videos or a folder with multiple videos to merge";
-            splitParamsPanel.Visible = splitRadioButton.Checked;
-            progressPanel.Top = splitRadioButton.Checked ? 204 : 127;
-            Height = splitRadioButton.Checked ? 224 : 160;
-        }
-
         private async void SelectFile_Click(object sender, EventArgs e)
         {
             openFileDialog.Title = "Select a video";
@@ -333,6 +423,114 @@ namespace SplitAndMerge
                 return;
             }
             await PrepareFiles(filePaths);
+        }
+
+        private void SplitRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            isSplitting = splitRadioButton.Checked;
+            selectSingleFileButton.Visible = splitRadioButton.Checked;
+            selectFilesButton.Visible = !splitRadioButton.Checked;
+            selectFolderButton.Visible = !splitRadioButton.Checked;
+            selectLabel.Text = splitRadioButton.Checked ? "Select a video to split" : "Select multiple videos or a folder with multiple videos to merge";
+            intervalSplitParamsPanel.Visible = splitRadioButton.Checked && intervalRadioButton.Checked;
+            specificSplitParamsPanel.Visible = splitRadioButton.Checked && !intervalRadioButton.Checked;
+            progressPanel.Top = splitRadioButton.Checked ? 204 : 127;
+            Height = splitRadioButton.Checked ? (intervalRadioButton.Checked ? 250 : 274 + fullSplitControlsDisplacement) : 158;
+        }
+
+        private void IntervalRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            intervalSplitParamsPanel.Visible = intervalRadioButton.Checked;
+            specificSplitParamsPanel.Visible = !intervalRadioButton.Checked;
+            Height = intervalRadioButton.Checked ? 250 : 274 + fullSplitControlsDisplacement;
+        }
+
+        private void AddButton_Click(object sender, EventArgs e)
+        {
+            fullSplitControlsDisplacement += incrementalSplitControlsDisplacement;
+            var newStartLabel = new Label
+            {
+                Left = startLabel.Left,
+                Top = startLabel.Top + fullSplitControlsDisplacement,
+                Size = startLabel.Size,
+                Text = startLabel.Text,
+                Font = startLabel.Font,
+                Parent = specificSplitParamsPanel,
+            };
+            var newStartTextBox = new TextBox
+            {
+                Top = startTextBox.Top + fullSplitControlsDisplacement,
+                Left = startTextBox.Left,
+                Size = startTextBox.Size,
+                Text = "00:00:00",
+                TextAlign = startTextBox.TextAlign,
+                Parent = specificSplitParamsPanel,
+            };
+            var newEndLabel = new Label
+            {
+                Left = endLabel.Left,
+                Top = endLabel.Top + fullSplitControlsDisplacement,
+                Size = endLabel.Size,
+                Text = endLabel.Text,
+                Font = endLabel.Font,
+                Parent = specificSplitParamsPanel,
+            };
+            var newEndTextBox = new TextBox
+            {
+                Top = endTextBox.Top + fullSplitControlsDisplacement,
+                Left = endTextBox.Left,
+                Size = endTextBox.Size,
+                Text = "00:00:00",
+                TextAlign = endTextBox.TextAlign,
+                Parent = specificSplitParamsPanel,
+            };
+            var newRemove = new Button
+            {
+                Left = removeButton.Left,
+                Top = removeButton.Top + fullSplitControlsDisplacement,
+                Size = removeButton.Size,
+                Text = removeButton.Text,
+                Parent = specificSplitParamsPanel
+            };
+            addButton.Top += incrementalSplitControlsDisplacement;
+            specificSplitParamsPanel.Height += incrementalSplitControlsDisplacement;
+            Height += incrementalSplitControlsDisplacement;
+            var newControls = new SpecificSplitControls
+            {
+                StartLabel = newStartLabel,
+                StartTextBox = newStartTextBox,
+                EndLabel = newEndLabel,
+                EndTextBox = newEndTextBox,
+                RemoveButton = newRemove,
+                Index = specificSplitControls.Count
+            };
+            newControls.RemoveButton.Click += (_, _) => RemoveSpecificSplitControls(newControls);
+            specificSplitControls.Add(newControls);
+        }
+
+        private void RemoveSpecificSplitControls(SpecificSplitControls controls)
+        {
+            specificSplitParamsPanel.Controls.Remove(controls.StartLabel);
+            specificSplitParamsPanel.Controls.Remove(controls.StartTextBox);
+            specificSplitParamsPanel.Controls.Remove(controls.EndLabel);
+            specificSplitParamsPanel.Controls.Remove(controls.EndTextBox);
+            specificSplitParamsPanel.Controls.Remove(controls.RemoveButton);
+
+            for (var i = controls.Index + 1; i < specificSplitControls.Count; i++)
+            {
+                specificSplitControls[i].StartLabel.Top -= incrementalSplitControlsDisplacement;
+                specificSplitControls[i].StartTextBox.Top -= incrementalSplitControlsDisplacement;
+                specificSplitControls[i].EndLabel.Top -= incrementalSplitControlsDisplacement;
+                specificSplitControls[i].EndTextBox.Top -= incrementalSplitControlsDisplacement;
+                specificSplitControls[i].RemoveButton.Top -= incrementalSplitControlsDisplacement;
+                specificSplitControls[i].Index--;
+            }
+            specificSplitControls.Remove(controls);
+
+            fullSplitControlsDisplacement -= incrementalSplitControlsDisplacement;
+            addButton.Top -= incrementalSplitControlsDisplacement;
+            specificSplitParamsPanel.Height -= incrementalSplitControlsDisplacement;
+            Height -= incrementalSplitControlsDisplacement;
         }
 
         private void CancelButton_Click(object? sender, EventArgs e)
@@ -466,6 +664,18 @@ namespace SplitAndMerge
 
                 CloseHandle(pOpenThread);
             }
+        }
+
+        class SpecificSplitControls
+        {
+            public Label StartLabel { get; set; }
+            public TextBox StartTextBox { get; set; }
+            public Label EndLabel { get; set; }
+            public TextBox EndTextBox { get; set; }
+            public Button RemoveButton { get; set; }
+            public int Index { get; set; }
+            public TimeSpan Duration { get; set; }
+            public bool Invalid { get; set; }
         }
     }
 }

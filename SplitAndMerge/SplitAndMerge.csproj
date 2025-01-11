@@ -10,13 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="EncircledPIERound.ico" />
+    <None Remove="ffmpeg.exe" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="ffmpeg.exe">
+    <Content Include="EncircledPIERound.ico" />
+    <Content Include="ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 
 </Project>

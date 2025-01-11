@@ -54,15 +54,28 @@
             howLongLabel = new Label();
             hourLabel = new Label();
             progressPanel = new Panel();
-            splitParamsPanel = new Panel();
+            intervalSplitParamsPanel = new Panel();
             secondLabel = new Label();
             minuteLabel = new Label();
             secondTextBox = new TextBox();
             minuteTextBox = new TextBox();
+            splitTypePanel = new Panel();
+            specificRadioButton = new RadioButton();
+            intervalRadioButton = new RadioButton();
+            label1 = new Label();
+            specificSplitParamsPanel = new Panel();
+            addButton = new Button();
+            endTextBox = new TextBox();
+            endLabel = new Label();
+            removeButton = new Button();
+            startTextBox = new TextBox();
+            startLabel = new Label();
             fileDialogPanel.SuspendLayout();
             actionTypePanel.SuspendLayout();
             progressPanel.SuspendLayout();
-            splitParamsPanel.SuspendLayout();
+            intervalSplitParamsPanel.SuspendLayout();
+            splitTypePanel.SuspendLayout();
+            specificSplitParamsPanel.SuspendLayout();
             SuspendLayout();
             // 
             // fileDialogPanel
@@ -277,7 +290,7 @@
             howLongLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             howLongLabel.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
             howLongLabel.ForeColor = SystemColors.ControlDarkDark;
-            howLongLabel.Location = new Point(12, 163);
+            howLongLabel.Location = new Point(12, 210);
             howLongLabel.Name = "howLongLabel";
             howLongLabel.Size = new Size(760, 15);
             howLongLabel.TabIndex = 1;
@@ -306,23 +319,23 @@
             progressPanel.Controls.Add(totalSegmentCountLabel);
             progressPanel.Controls.Add(currentFileLabel);
             progressPanel.Controls.Add(progressLabel);
-            progressPanel.Location = new Point(12, 204);
+            progressPanel.Location = new Point(12, 279);
             progressPanel.Name = "progressPanel";
             progressPanel.Size = new Size(760, 131);
             progressPanel.TabIndex = 10;
             // 
-            // splitParamsPanel
+            // intervalSplitParamsPanel
             // 
-            splitParamsPanel.Controls.Add(secondLabel);
-            splitParamsPanel.Controls.Add(minuteLabel);
-            splitParamsPanel.Controls.Add(secondTextBox);
-            splitParamsPanel.Controls.Add(minuteTextBox);
-            splitParamsPanel.Controls.Add(hourLabel);
-            splitParamsPanel.Controls.Add(hourTextBox);
-            splitParamsPanel.Location = new Point(12, 127);
-            splitParamsPanel.Name = "splitParamsPanel";
-            splitParamsPanel.Size = new Size(760, 32);
-            splitParamsPanel.TabIndex = 11;
+            intervalSplitParamsPanel.Controls.Add(secondLabel);
+            intervalSplitParamsPanel.Controls.Add(minuteLabel);
+            intervalSplitParamsPanel.Controls.Add(secondTextBox);
+            intervalSplitParamsPanel.Controls.Add(minuteTextBox);
+            intervalSplitParamsPanel.Controls.Add(hourLabel);
+            intervalSplitParamsPanel.Controls.Add(hourTextBox);
+            intervalSplitParamsPanel.Location = new Point(12, 174);
+            intervalSplitParamsPanel.Name = "intervalSplitParamsPanel";
+            intervalSplitParamsPanel.Size = new Size(760, 32);
+            intervalSplitParamsPanel.TabIndex = 11;
             // 
             // secondLabel
             // 
@@ -364,20 +377,140 @@
             minuteTextBox.Text = "10";
             minuteTextBox.TextAlign = HorizontalAlignment.Right;
             // 
+            // splitTypePanel
+            // 
+            splitTypePanel.Controls.Add(specificRadioButton);
+            splitTypePanel.Controls.Add(intervalRadioButton);
+            splitTypePanel.Location = new Point(318, 113);
+            splitTypePanel.Name = "splitTypePanel";
+            splitTypePanel.Size = new Size(147, 27);
+            splitTypePanel.TabIndex = 8;
+            // 
+            // specificRadioButton
+            // 
+            specificRadioButton.AutoSize = true;
+            specificRadioButton.Location = new Point(77, 3);
+            specificRadioButton.Name = "specificRadioButton";
+            specificRadioButton.Size = new Size(66, 19);
+            specificRadioButton.TabIndex = 3;
+            specificRadioButton.TabStop = true;
+            specificRadioButton.Text = "Specific";
+            specificRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // intervalRadioButton
+            // 
+            intervalRadioButton.AutoSize = true;
+            intervalRadioButton.Location = new Point(4, 3);
+            intervalRadioButton.Name = "intervalRadioButton";
+            intervalRadioButton.Size = new Size(64, 19);
+            intervalRadioButton.TabIndex = 2;
+            intervalRadioButton.TabStop = true;
+            intervalRadioButton.Text = "Interval";
+            intervalRadioButton.UseVisualStyleBackColor = true;
+            intervalRadioButton.CheckedChanged += IntervalRadioButton_CheckedChanged;
+            // 
+            // label1
+            // 
+            label1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            label1.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
+            label1.ForeColor = SystemColors.ControlDarkDark;
+            label1.Location = new Point(12, 143);
+            label1.Name = "label1";
+            label1.Size = new Size(760, 15);
+            label1.TabIndex = 7;
+            label1.Text = "Are you splitting ar regular intervals or are you extracting at arbitrary time frames?";
+            label1.TextAlign = ContentAlignment.MiddleCenter;
+            // 
+            // specificSplitParamsPanel
+            // 
+            specificSplitParamsPanel.Controls.Add(addButton);
+            specificSplitParamsPanel.Controls.Add(endTextBox);
+            specificSplitParamsPanel.Controls.Add(endLabel);
+            specificSplitParamsPanel.Controls.Add(removeButton);
+            specificSplitParamsPanel.Controls.Add(startTextBox);
+            specificSplitParamsPanel.Controls.Add(startLabel);
+            specificSplitParamsPanel.Location = new Point(12, 212);
+            specificSplitParamsPanel.Name = "specificSplitParamsPanel";
+            specificSplitParamsPanel.Size = new Size(760, 61);
+            specificSplitParamsPanel.TabIndex = 12;
+            // 
+            // addButton
+            // 
+            addButton.Location = new Point(334, 31);
+            addButton.Name = "addButton";
+            addButton.Size = new Size(75, 21);
+            addButton.TabIndex = 12;
+            addButton.Text = "Add";
+            addButton.UseVisualStyleBackColor = true;
+            addButton.Click += AddButton_Click;
+            // 
+            // endTextBox
+            // 
+            endTextBox.Location = new Point(370, 2);
+            endTextBox.Name = "endTextBox";
+            endTextBox.Size = new Size(59, 23);
+            endTextBox.TabIndex = 11;
+            endTextBox.Text = "00:00:00";
+            endTextBox.TextAlign = HorizontalAlignment.Right;
+            // 
+            // endLabel
+            // 
+            endLabel.AutoSize = true;
+            endLabel.Font = new Font("Segoe UI", 7F, FontStyle.Regular, GraphicsUnit.Point);
+            endLabel.Location = new Point(334, 7);
+            endLabel.Name = "endLabel";
+            endLabel.Size = new Size(22, 12);
+            endLabel.TabIndex = 10;
+            endLabel.Text = "End";
+            endLabel.TextAlign = ContentAlignment.BottomLeft;
+            // 
+            // removeButton
+            // 
+            removeButton.Enabled = false;
+            removeButton.Location = new Point(452, 3);
+            removeButton.Name = "removeButton";
+            removeButton.Size = new Size(75, 21);
+            removeButton.TabIndex = 9;
+            removeButton.Text = "Remove";
+            removeButton.UseVisualStyleBackColor = true;
+            // 
+            // startTextBox
+            // 
+            startTextBox.Location = new Point(251, 2);
+            startTextBox.Name = "startTextBox";
+            startTextBox.Size = new Size(59, 23);
+            startTextBox.TabIndex = 9;
+            startTextBox.Text = "00:00:00";
+            startTextBox.TextAlign = HorizontalAlignment.Right;
+            // 
+            // startLabel
+            // 
+            startLabel.AutoSize = true;
+            startLabel.Font = new Font("Segoe UI", 7F, FontStyle.Regular, GraphicsUnit.Point);
+            startLabel.Location = new Point(215, 7);
+            startLabel.Name = "startLabel";
+            startLabel.Size = new Size(24, 12);
+            startLabel.TabIndex = 4;
+            startLabel.Text = "Start";
+            startLabel.TextAlign = ContentAlignment.BottomLeft;
+            // 
             // MainForm
             // 
             AllowDrop = true;
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(784, 334);
-            Controls.Add(howLongLabel);
-            Controls.Add(splitParamsPanel);
+            ClientSize = new Size(784, 410);
+            Controls.Add(specificSplitParamsPanel);
+            Controls.Add(splitTypePanel);
+            Controls.Add(label1);
             Controls.Add(progressPanel);
             Controls.Add(actionTypePanel);
             Controls.Add(label2);
             Controls.Add(selectLabel);
             Controls.Add(fileNameLabel);
             Controls.Add(fileDialogPanel);
+            Controls.Add(intervalSplitParamsPanel);
+            Controls.Add(howLongLabel);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
@@ -391,8 +524,12 @@
             actionTypePanel.PerformLayout();
             progressPanel.ResumeLayout(false);
             progressPanel.PerformLayout();
-            splitParamsPanel.ResumeLayout(false);
-            splitParamsPanel.PerformLayout();
+            intervalSplitParamsPanel.ResumeLayout(false);
+            intervalSplitParamsPanel.PerformLayout();
+            splitTypePanel.ResumeLayout(false);
+            splitTypePanel.PerformLayout();
+            specificSplitParamsPanel.ResumeLayout(false);
+            specificSplitParamsPanel.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -422,11 +559,22 @@
         private Label howLongLabel;
         private Label hourLabel;
         private Panel progressPanel;
-        private Panel splitParamsPanel;
+        private Panel intervalSplitParamsPanel;
         private Label secondLabel;
         private Label minuteLabel;
         private TextBox secondTextBox;
         private TextBox minuteTextBox;
         private Button selectSingleFileButton;
+        private Panel splitTypePanel;
+        private RadioButton specificRadioButton;
+        private RadioButton intervalRadioButton;
+        private Label label1;
+        private Panel specificSplitParamsPanel;
+        private Label startLabel;
+        private TextBox startTextBox;
+        private TextBox endTextBox;
+        private Label endLabel;
+        private Button removeButton;
+        private Button addButton;
     }
 }
