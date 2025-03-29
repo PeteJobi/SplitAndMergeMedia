@@ -107,63 +107,9 @@ namespace SplitAndMerge
                 fileNameLabel.Text = outputFileName;
                 outputFileName = pathForView = Path.Combine(folder, outputFileName + Path.GetExtension(fileNames[0]));
                 await Merge(fileNames, outputFileName, folder);
-                //await Compress(fileNames[0]);
             }
         }
-
-        async Task Compress(string fileName)
-        {
-            TimeSpan duration = TimeSpan.MinValue;
-            await StartProcess(ffmpegPath, $"-i \"{fileName}\"", null, (sender, args) =>
-            {
-                if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
-                if (duration != TimeSpan.MinValue) return;
-                var matchCollection = Regex.Matches(args.Data, @"\s*Duration:\s(\d{2}:\d{2}:\d{2}\.\d{2}).+");
-                if (matchCollection.Count == 0) return;
-                duration = TimeSpan.Parse(matchCollection[0].Groups[1].Value);
-            });
-            //var fileSize = (await File.ReadAllBytesAsync(fileName)).Length;
-            var targetSize = int.Parse(hourTextBox.Text) * 1000 * 1000 * 8;
-            var totalBitrate = (double) targetSize / duration.TotalSeconds;
-            var audioBitrate = 192 * 1000;
-            var videoBitrate = totalBitrate - audioBitrate;
-            File.Delete(GetOutputName(fileName));
-            await StartProcess(ffmpegPath, $"-i \"{fileName}\" -b:v {videoBitrate} -b:a {audioBitrate} \"{GetOutputName(fileName)}\"", null, (sender, args) =>
-            {
-                Debug.WriteLine(args.Data);
-                //if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
-                //if (duration == TimeSpan.MinValue)
-                //{
-                //    MatchCollection matchCollection = Regex.Matches(args.Data, @"\s*Duration:\s(\d{2}:\d{2}:\d{2}\.\d{2}).+");
-                //    if (matchCollection.Count == 0) return;
-                //    duration = TimeSpan.Parse(matchCollection[0].Groups[1].Value);
-                //    totalSegments = SetTotalProgressIntervalSplit(duration, segmentDuration);
-                //}
-                //else if (args.Data.StartsWith("[segment @"))
-                //{
-                //    currentSegment++;
-                //    Invoke(() => currentFileLabel.Text = ExtendedName(fileName, currentSegment.ToString("D3")));
-                //}
-                //else if (args.Data.StartsWith("frame"))
-                //{
-                //    if (CheckNoSpaceDuringBreakMerge(args.Data)) return;
-                //    MatchCollection matchCollection = Regex.Matches(args.Data, @"^frame=\s*\d+\s.+?time=(\d{2}:\d{2}:\d{2}\.\d{2}).+");
-                //    if (matchCollection.Count == 0) return;
-                //    IncrementIntervalSplitProgress(segmentDuration, TimeSpan.Parse(matchCollection[0].Groups[1].Value), duration, currentSegment, totalSegments);
-                //}
-            });
-            if (HasBeenKilled()) return;
-            AllDone(1);
-        }
-
-        string GetOutputName(string path)
-        {
-            string inputName = Path.GetFileNameWithoutExtension(path);
-            string extension = Path.GetExtension(path);
-            string parentFolder = Path.GetDirectoryName(path) ?? throw new FileNotFoundException($"The specified path does not exist: {path}");
-            return Path.Combine(parentFolder, $"{inputName}{"COMP"}{extension}");
-        }
-
+        
         async Task IntervalSplit(string fileName)
         {
             var segmentDuration = TimeSpan.Parse($"{hourTextBox.Text}:{minuteTextBox.Text}:{secondTextBox.Text}");
@@ -228,7 +174,7 @@ namespace SplitAndMerge
                 var controls = specificSplitControls[i];
                 var current = i;
                 Invoke(() => currentFileLabel.Text = ExtendedName(fileName, current.ToString("D3")));
-                await StartProcess(ffmpegPath, $"-i \"{fileName}\" -c copy -map 0 -ss {controls.StartTextBox.Text} -to {controls.EndTextBox.Text} -avoid_negative_ts make_zero \"{folder}/{ExtendedName(fileName, current.ToString("D3"))}\"", null, (sender, args) =>
+                await StartProcess(ffmpegPath, $"-ss {controls.StartTextBox.Text} -i \"{fileName}\" -c copy -map 0 -to {controls.EndTextBox.Text} -avoid_negative_ts make_zero \"{folder}/{ExtendedName(fileName, current.ToString("D3"))}\"", null, (sender, args) =>
                 {
                     if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
                     if (!args.Data.StartsWith("frame")) return;
