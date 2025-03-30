@@ -116,7 +116,7 @@ namespace SplitAndMerge
             TimeSpan duration = TimeSpan.MinValue;
             int totalSegments = 0;
             int currentSegment = -1;
-            await StartProcess(ffmpegPath, $"-i \"{fileName}\" -c copy -map 0 -segment_time {segmentDuration} -copyts -avoid_negative_ts make_non_negative -f segment -reset_timestamps 1 \"{GetOutputFolder(fileName)}/{ExtendedName(fileName, "%03d")}\"", null, (sender, args) =>
+            await StartProcess(ffmpegPath, $"-i \"{fileName}\" -c copy -map 0 -segment_time {segmentDuration} -f segment -reset_timestamps 1 \"{GetOutputFolder(fileName)}/{ExtendedName(fileName, "%03d")}\"", null, (sender, args) =>
             {
                 Debug.WriteLine(args.Data);
                 if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
@@ -174,7 +174,7 @@ namespace SplitAndMerge
                 var controls = specificSplitControls[i];
                 var current = i;
                 Invoke(() => currentFileLabel.Text = ExtendedName(fileName, current.ToString("D3")));
-                await StartProcess(ffmpegPath, $"-ss {controls.StartTextBox.Text} -i \"{fileName}\" -c copy -map 0 -to {controls.EndTextBox.Text} -avoid_negative_ts make_zero \"{folder}/{ExtendedName(fileName, current.ToString("D3"))}\"", null, (sender, args) =>
+                await StartProcess(ffmpegPath, $"-ss {controls.StartTextBox.Text} -i \"{fileName}\" -c copy -map 0 -t {controls.Duration.TotalSeconds} -avoid_negative_ts make_zero \"{folder}/{ExtendedName(fileName, current.ToString("D3"))}\"", null, (sender, args) =>
                 {
                     if (string.IsNullOrWhiteSpace(args.Data) || hasBeenKilled) return;
                     if (!args.Data.StartsWith("frame")) return;
@@ -299,7 +299,7 @@ namespace SplitAndMerge
                 totalSegmentCountLabel.Text = $"{currentSegment}/{totalSegments}";
                 overallProgressBar.Value = Math.Max(0, Math.Min((int)((currentTime + elapsedDuration) / totalDuration * PROGRESS_MAX), PROGRESS_MAX));
                 double fraction = currentTime / segmentDuration;
-                currentActionProgressBar.Value = (int)(fraction * PROGRESS_MAX);
+                currentActionProgressBar.Value = Math.Max(0, Math.Min((int)(fraction * PROGRESS_MAX), PROGRESS_MAX)); ;
                 splitMergeProgressLabel.Text = $"{Math.Round(fraction * 100, 2)} %";
             });
         }
